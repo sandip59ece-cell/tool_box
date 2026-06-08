@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analog Communication Waveform Visualization Toolbox</title>
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="An interactive, high-fidelity real-time simulation and visualization toolbox for analog communication systems. Explore AM, DSB-SC, SSB, FM, PM, PAM, PWM, and PPM.">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        :root {
+            --bg-base: #0a0f1d;
+            --bg-surface: rgba(18, 26, 47, 0.65);
+            --bg-surface-solid: #121a2f;
+            --bg-control: rgba(30, 41, 73, 0.5);
+            --bg-control-active: rgba(45, 63, 107, 0.8);
+            
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-color-glow: rgba(0, 242, 254, 0.2);
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            /* Neon Accent Colors */
+            --color-message: #00f2fe; /* Cyan glow */
+            --color-carrier: #d946ef; /* Magenta glow */
+            --color-modulated: #38bdf8; /* Sky blue */
+            --color-demodulated: #10b981; /* Emerald green */
+            --color-spectrum: #f59e0b; /* Amber */
+            --color-noise: #ef4444; /* Rose red */
+            
+            --glow-message: 0 0 12px rgba(0, 242, 254, 0.4);
+            --glow-carrier: 0 0 12px rgba(217, 70, 239, 0.4);
+            --glow-modulated: 0 0 12px rgba(56, 189, 248, 0.4);
+            --glow-demodulated: 0 0 12px rgba(16, 185, 129, 0.4);
+            --glow-spectrum: 0 0 12px rgba(245, 158, 11, 0.4);
+            
+            --glass-blur: blur(16px);
+            --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            --font-sans: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(217, 70, 239, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+            line-height: 1.5;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-base);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-control);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--bg-control-active);
+        }
+
+        header {
+            background: rgba(10, 15, 29, 0.8);
+            backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--color-message), var(--color-carrier));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-section p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .preset-container {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            max-width: 50%;
+            padding: 0.25rem;
+        }
+
+        .btn-preset {
+            background: var(--bg-control);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-preset:hover, .btn-preset.active {
+            background: var(--bg-control-active);
+            color: var(--text-primary);
+            border-color: var(--color-message);
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.2);
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            height: calc(100vh - 75px);
+        }
+
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        /* Control Panel Card */
+        .control-panel {
+            background: var(--bg-surface);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow-premium);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            max-height: 100%;
+        }
+
+        .control-section {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .control-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .control-section h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            margin-bottom: 0.75rem;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label-wrapper {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .control-value {
+            font-family: var(--font-mono);
+            color: var(--color-message);
+            font-weight: 600;
+        }
+
+        select {
+            width: 100%;
+            background: var(--bg-control);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--color-message);
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.2);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            outline: none;
+            margin: 8px 0;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: var(--bg-control);
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--color-message);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
+            transition: background 0.15s, transform 0.15s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #ffffff;
+            transform: scale(1.15);
+        }
+
+        /* Custom checkbox/toggle */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+        }
+
+        .toggle-wrapper span {
+            font-size: 0.85rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-control);
+            transition: .3s;
+            border-radius: 34px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-secondary);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider-toggle {
+            background-color: rgba(16, 185, 129, 0.2);
+            border-color: var(--color-demodulated);
+        }
+
+        input:checked + .slider-toggle:before {
+            transform: translateX(16px);
+            background-color: var(--color-demodulated);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Visualization Board */
+        .visual-board {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 1rem;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .board-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .btn-ctrl {
+            background: var(--bg-control);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .btn-ctrl:hover {
+            background: var(--bg-control-active);
+            border-color: var(--color-message);
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.2);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 300px);
+            gap: 1rem;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+        }
+
+        .visual-card {
+            background: var(--bg-surface);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: var(--shadow-premium);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .visual-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-card, var(--color-message));
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-header h2 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-math {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .canvas-container {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            height: calc(100% - 30px);
+            background: rgba(8, 12, 24, 0.6);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .card-stats {
+            display: flex;
+            justify-content: flex-start;
+            gap: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            margin-top: 0.4rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-item span {
+            color: var(--accent-card, var(--color-message));
+            font-weight: 600;
+        }
+
+        /* Theory/Explanation Panel */
+        .theory-card {
+            background: var(--bg-surface);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow-premium);
+            margin-top: 1rem;
+        }
+
+        .theory-card h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--color-message);
+        }
+
+        .theory-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .formula-block {
+            background: rgba(10, 15, 29, 0.5);
+            border-radius: 6px;
+            padding: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--color-modulated);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            text-align: center;
+            margin: 0.5rem 0;
+        }
+
+        /* Preset Specific Highlights */
+        .color-msg { --accent-card: var(--color-message); }
+        .color-carr { --accent-card: var(--color-carrier); }
+        .color-mod { --accent-card: var(--color-modulated); }
+        .color-demod { --accent-card: var(--color-demodulated); }
+        .color-spec { --accent-card: var(--color-spectrum); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-section">
+            <h1>Analog Waveform Sandbox</h1>
+            <p>Interactive Analog Communication Laboratory</p>
+        </div>
+        <div class="preset-container" id="presetContainer">
+            <button class="btn-preset active" data-preset="am-standard">Standard AM</button>
+            <button class="btn-preset" data-preset="am-overmod">AM Overmodulation</button>
+            <button class="btn-preset" data-preset="dsb-sc">DSB-SC Suppression</button>
+            <button class="btn-preset" data-preset="ssb-single">SSB-SC Single Tone</button>
+            <button class="btn-preset" data-preset="fm-wideband">Wideband FM</button>
+            <button class="btn-preset" data-preset="pam-sampling">Pulse Sampling (PAM)</button>
+            <button class="btn-preset" data-preset="noise-channel">Noisy Channel</button>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Control Panel Sidebar -->
+        <aside class="control-panel">
+            <!-- System Parameters -->
+            <section class="control-section">
+                <h3>System Scheme</h3>
+                <div class="control-group">
+                    <label for="modulationSelect">Modulation Type</label>
+                    <select id="modulationSelect">
+                        <option value="am-dsbfc">Amplitude Modulation (DSB-FC)</option>
+                        <option value="am-dsbsc">Double Sideband SC (DSB-SC)</option>
+                        <option value="am-ssbsc">Single Sideband SC (SSB-SC)</option>
+                        <option value="fm">Frequency Modulation (FM)</option>
+                        <option value="pm">Phase Modulation (PM)</option>
+                        <option value="pam">Pulse Amplitude Modulation (PAM)</option>
+                        <option value="pwm">Pulse Width Modulation (PWM)</option>
+                        <option value="ppm">Pulse Position Modulation (PPM)</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Message Signal Parameters -->
+            <section class="control-section">
+                <h3>Message Signal m(t)</h3>
+                <div class="control-group">
+                    <div class="control-label-wrapper">
+                        <label for="msgAmp">Amplitude (A<sub>m</sub>)</label>
+                        <span class="control-value" id="msgAmpVal">1.0 V</span>
+                    </div>
+                    <input type="range" id="msgAmp" min="0" max="2" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <div class="control-label-wrapper">
+                        <label for="msgFreq">Frequency (f<sub>m</sub>)</label>
+                        <span class="control-value" id="msgFreqVal">5.0 Hz</span>
+                    </div>
+                    <input type="range" id="msgFreq" min="0.5" max="20" step="0.5" value="5.0">
+                </div>
+                <div class="control-group">
+                    <div class="control-label-wrapper">
+                        <label for="msgPhase">Phase Shift (&theta;<sub>m</sub>)</label>
+                        <span class="control-value" id="msgPhaseVal">0&deg;</span>
+                    </div>
+                    <input type="range" id="msgPhase" min="-180" max="180" step="15" value="0">
+                </div>
+            </section>
+
+            <!-- Carrier Signal Parameters -->
+            <section class="control-section">
+                <h3>Carrier Signal c(t)</h3>
+                <div class="control-group">
+                    <div class="control-label-wrapper">
+                        <label for="carAmp">Amplitude (A<sub>c</sub>)</label>
+                        <span class="control-value" id="carAmpVal">1.0 V</span>
+                    </div>
+                    <input type="range" id="carAmp" min="0.2" max="2" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <div class="control-label-wrapper">
+                        <label for="carFreq">Frequency (f<sub>c</sub>)</label>
+                        <span class="control-value" id="carFreqVal">80 Hz</span>
+                    </div>
+                    <input type="range" id="carFreq" min="30" max="200" step="5" value="80">
+                </div>
+            </section>
+
+            <!-- Modulation Parameters -->
+            <section class="control-section">
+                <h3>Modulation Variables</h3>
+                <!-- AM Mod Index -->
+                <div class="control-group" id="groupAmModIndex">
+                    <div class="control-label-wrapper">
+                        <label for="amModIndex">Modulation Index (m)</label>
+                        <span class="control-value" id="amModIndexVal">1.00</span>
+                    </div>
+                    <input type="range" id="amModIndex" min="0" max="2" step="0.05" value="1.0">
+                </div>
+                <!-- FM Beta -->
+                <div class="control-group" id="groupFmBeta" style="display: none;">
+                    <div class="control-label-wrapper">
+                        <label for="fmBeta">Modulation Index (&beta;)</label>
+                        <span class="control-value" id="fmBetaVal">3.0</span>
+                    </div>
+                    <input type="range" id="fmBeta" min="0.1" max="10" step="0.1" value="3.0">
+                </div>
+                <!-- PM kp -->
+                <div class="control-group" id="groupPmKp" style="display: none;">
+                    <div class="control-label-wrapper">
+                        <label for="pmKp">Sensitivity (k<sub>p</sub>)</label>
+                        <span class="control-value" id="pmKpVal">1.5 rad/V</span>
+                    </div>
+                    <input type="range" id="pmKp" min="0.1" max="5" step="0.1" value="1.5">
+                </div>
+                <!-- Pulse Modulation Variables -->
+                <div class="control-group" id="groupPulseParams" style="display: none;">
+                    <div class="control-label-wrapper">
+                        <label for="pulseFreq">Sampling Freq (f<sub>s</sub>)</label>
+                        <span class="control-value" id="pulseFreqVal">40 Hz</span>
+                    </div>
+                    <input type="range" id="pulseFreq" min="10" max="120" step="2" value="40">
+                </div>
+                <div class="control-group" id="groupPulseWidth" style="display: none;">
+                    <div class="control-label-wrapper">
+                        <label for="pulseWidth">Pulse Width (Duty Cycle)</label>
+                        <span class="control-value" id="pulseWidthVal">20%</span>
+                    </div>
+                    <input type="range" id="pulseWidth" min="5" max="80" step="5" value="20">
+                </div>
+            </section>
+
+            <!-- Channel and Demodulator Settings -->
+            <section class="control-section">
+                <h3>Channel & Demodulator</h3>
+                <div class="control-group">
+                    <div class="control-label-wrapper">
+                        <label for="noiseLevel">Noise Level (AWGN SNR)</label>
+                        <span class="control-value" id="noiseLevelVal">Clean</span>
+                    </div>
+                    <input type="range" id="noiseLevel" min="0" max="40" step="1" value="40">
+                </div>
+                <!-- Envelope detector options -->
+                <div class="control-group" id="groupEnvelopeDet">
+                    <div class="control-label-wrapper">
+                        <label for="rcTime">RC Time Constant (&tau;)</label>
+                        <span class="control-value" id="rcTimeVal">Medium</span>
+                    </div>
+                    <input type="range" id="rcTime" min="1" max="100" step="1" value="50">
+                </div>
+                <!-- Coherent receiver phase error -->
+                <div class="control-group" id="groupCoherentDet" style="display: none;">
+                    <div class="control-label-wrapper">
+                        <label for="coherentPhase">LO Phase Error (&Delta;&phi;)</label>
+                        <span class="control-value" id="coherentPhaseVal">0&deg;</span>
+                    </div>
+                    <input type="range" id="coherentPhase" min="-90" max="90" step="5" value="0">
+                </div>
+            </section>
+        </aside>
+
+        <!-- Visualization Board -->
+        <section class="visual-board">
+            <div class="board-top-bar">
+                <div class="playback-controls">
+                    <button class="btn-ctrl" id="playBtn" title="Play/Pause Simulation">
+                        <!-- Play Icon SVG -->
+                        <svg id="playIcon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        <!-- Pause Icon SVG (hidden by default) -->
+                        <svg id="pauseIcon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <label style="font-size: 0.85rem; color: var(--text-secondary); margin-left: 0.5rem;" for="zoomRange">Timebase Zoom</label>
+                    <input type="range" id="zoomRange" min="5" max="40" step="1" value="20" style="width: 100px; margin: 0 0.5rem;">
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; gap: 1rem;">
+                    <div>Time: <span id="timeDisplay" style="font-family: var(--font-mono); color: var(--color-message);">0.000s</span></div>
+                    <div>Nyquist Status: <span id="nyquistDisplay" style="font-weight: 600;">Safe</span></div>
+                </div>
+            </div>
+
+            <!-- Dashboard Charts -->
+            <div class="dashboard-grid">
+                <!-- Message & Carrier Input -->
+                <div class="visual-card color-msg">
+                    <div class="card-header">
+                        <h2>Input Signals</h2>
+                        <div class="card-math">m(t) & c(t)</div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="canvasInput"></canvas>
+                    </div>
+                    <div class="card-stats">
+                        <div class="stat-item">m(t) Max: <span id="statMsgMax">1.00V</span></div>
+                        <div class="stat-item">c(t) Max: <span id="statCarMax">1.00V</span></div>
+                    </div>
+                </div>
+
+                <!-- Modulated Waveform -->
+                <div class="visual-card color-mod">
+                    <div class="card-header">
+                        <h2>Modulated Channel Waveform s(t)</h2>
+                        <div class="card-math" id="mathModulated">s(t) = ...</div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="canvasModulated"></canvas>
+                    </div>
+                    <div class="card-stats">
+                        <div class="stat-item">Peak Power: <span id="statModPower">0.50 W</span></div>
+                        <div class="stat-item">Max V<sub>p</sub>: <span id="statModVp">2.00 V</span></div>
+                    </div>
+                </div>
+
+                <!-- Demodulated Output -->
+                <div class="visual-card color-demod">
+                    <div class="card-header">
+                        <h2>Demodulated & Recovered Output</h2>
+                        <div class="card-math" id="mathDemodulated">y(t) = ...</div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="canvasDemodulated"></canvas>
+                    </div>
+                    <div class="card-stats">
+                        <div class="stat-item">Fidelity (THD): <span id="statFidelity">Excellent</span></div>
+                        <div class="stat-item">Signal Delay: <span id="statDelay">0 ms</span></div>
+                    </div>
+                </div>
+
+                <!-- Frequency Spectrum Analyzer -->
+                <div class="visual-card color-spec">
+                    <div class="card-header">
+                        <h2>Frequency Spectrum Analyzer</h2>
+                        <div class="card-math">S(f) vs f</div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="canvasSpectrum"></canvas>
+                    </div>
+                    <div class="card-stats">
+                        <div class="stat-item">Bandwidth (99%): <span id="statBandwidth">10.0 Hz</span></div>
+                        <div class="stat-item">Carrier Power: <span id="statCarrPower">0.50 W</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Explanation Section -->
+            <article class="theory-card" id="theorySection">
+                <h3 id="theoryTitle">Loading...</h3>
+                <p id="theoryBody">Please select a modulation type to view details.</p>
+                <div class="formula-block" id="theoryFormula">s(t) = ...</div>
+            </article>
+        </section>
+    </main>
+
+    <script>
+        /**
+         * Analog Communication Waveform Visualization Toolbox
+         * Core JavaScript Simulation & Rendering Engine
+         */
+
+        // State Object
+        const state = {
+            play: true,
+            time: 0,
+            timeScale: 0.2, // seconds visible in window
+            modulationType: 'am-dsbfc', // default
+            
+            // Message Signal m(t)
+            msgAmp: 1.0,
+            msgFreq: 5.0,
+            msgPhase: 0, // in radians
+            
+            // Carrier Signal c(t)
+            carAmp: 1.0,
+            carFreq: 80.0,
+            
+            // Modulation Index/Accents
+            amModIndex: 1.0,
+            fmBeta: 3.0,
+            pmKp: 1.5,
+            pulseFreq: 40.0,
+            pulseWidth: 20.0, // in percentage
+            
+            // Channel / Demodulator
+            noiseSNR: 40.0, // dB, 40 means clean
+            rcTime: 50.0, // RC constant for envelope detector
+            coherentPhase: 0.0, // in radians
+            
+            // Animation
+            lastFrameTime: 0
+        };
+
+        // Canvas Configuration
+        const canvases = {
+            input: { id: 'canvasInput', ctx: null, width: 0, height: 0 },
+            modulated: { id: 'canvasModulated', ctx: null, width: 0, height: 0 },
+            demodulated: { id: 'canvasDemodulated', ctx: null, width: 0, height: 0 },
+            spectrum: { id: 'canvasSpectrum', ctx: null, width: 0, height: 0 }
+        };
+
+        // Theory Text Database
+        const theoryData = {
+            'am-dsbfc': {
+                title: 'Amplitude Modulation (Double Sideband Full Carrier - DSB-FC)',
+                body: 'Standard AM includes the carrier wave along with the sidebands. It can be easily demodulated using a simple diode envelope detector. However, transmitting the carrier wastes power (up to 66.7% of total power), making it power-inefficient. When the modulation index m > 1.0, over-modulation occurs, resulting in phase reversal and envelope distortion.',
+                formula: 's(t) = [A_c + m(t)] \\cos(2\\pi f_c t) = A_c [1 + m \\cos(2\\pi f_m t)] \\cos(2\\pi f_c t)'
+            },
+            'am-dsbsc': {
+                title: 'Double Sideband Suppressed Carrier (DSB-SC)',
+                body: 'DSB-SC suppresses the carrier component, transmitting only the sidebands. This saves significant transmitter power. Because there is no carrier, a standard envelope detector cannot recover the message; coherent detection (using a local carrier synchronized in frequency and phase) is required. Phase errors in the receiver carrier cause signal attenuation (quadrature null effect at 90°).',
+                formula: 's(t) = m(t) c(t) = A_m A_c \\cos(2\\pi f_m t) \\cos(2\\pi f_c t)'
+            },
+            'am-ssbsc': {
+                title: 'Single Sideband Suppressed Carrier (SSB-SC)',
+                body: 'SSB-SC suppresses the carrier and one of the sidebands (transmitting either the Upper or Lower Sideband). This halves the bandwidth requirement of DSB (saving spectral space) and maximizes power efficiency. Demodulation requires coherent detection. A phase shift in the local carrier causes phase shifts in all message frequencies, but doesn\'t result in amplitude loss.',
+                formula: 's_{USB}(t) = m(t)\\cos(2\\pi f_c t) - \\hat{m}(t)\\sin(2\\pi f_c t) \\quad [\\hat{m}(t) \\text{ is Hilbert Transform}]'
+            },
+            'fm': {
+                title: 'Frequency Modulation (FM)',
+                body: 'FM encodes the message in the instantaneous frequency of the carrier. Since amplitude remains constant, FM has high immunity to channel noise (noise affects amplitude). Wideband FM occupies a larger bandwidth governed by Carson\'s Rule: B ≈ 2(β + 1)f_m. Adjusting the modulation index (β) changes the sidebands, which are mathematically described by Bessel functions.',
+                formula: 's(t) = A_c \\cos\\left(2\\pi f_c t + \\beta \\sin(2\\pi f_m t + \\theta_m)\\right)'
+            },
+            'pm': {
+                title: 'Phase Modulation (PM)',
+                body: 'PM varies the instantaneous phase of the carrier signal linearly with the message amplitude. PM is closely related to FM (the derivative of the message modulates the frequency in PM). PM is widely used in digital modulation systems and synthesizers.',
+                formula: 's(t) = A_c \\cos\\left(2\\pi f_c t + k_p m(t)\\right)'
+            },
+            'pam': {
+                title: 'Pulse Amplitude Modulation (PAM)',
+                body: 'PAM is an analog pulse modulation technique where the amplitude of regularly spaced pulses is varied in proportion to the message signal. This project simulates Flat-top (Sample & Hold) PAM, showing how Nyquist sampling theory applies. If sampling frequency f_s < 2 * f_m, aliasing occurs.',
+                formula: 's(t) = \\sum_{k=-\\infty}^{\\infty} m(k T_s) \\cdot p(t - k T_s) \\quad [p(t) \\text{ is sampling pulse}]'
+            },
+            'pwm': {
+                title: 'Pulse Width Modulation (PWM)',
+                body: 'PWM (or Pulse Duration Modulation) varies the width/duration of the pulses in a pulse train in proportion to the message amplitude. It is generated by comparing the message signal with a high-frequency sawtooth/triangular carrier. PWM is highly efficient and commonly used in power control, class-D amplifiers, and motor drives.',
+                formula: 's(t) = A_p \\cdot \\text{rect}\\left( \\frac{t - k T_s}{w(k T_s)} \\right) \\quad [w(t) \\propto m(t)]'
+            },
+            'ppm': {
+                title: 'Pulse Position Modulation (PPM)',
+                body: 'PPM varies the starting position of a narrow pulse within each sampling window based on the message signal\'s amplitude. PPM is typically derived from PWM by sending a trigger pulse at the trailing edge of the PWM pulse. PPM has constant amplitude and width, making it robust against noise.',
+                formula: 's(t) = \\sum_{k=-\\infty}^{\\infty} g(t - k T_s - t_d - k_{ppm} m(k T_s))'
+            }
+        };
+
+        // Initialize app when DOM is loaded
+        window.addEventListener('DOMContentLoaded', () => {
+            initCanvases();
+            setupEventListeners();
+            updateUIValues();
+            updateTheoryText();
+            
+            // Start simulation loop
+            state.lastFrameTime = performance.now();
+            requestAnimationFrame(simulationLoop);
+        });
+
+        // Canvas Setup
+        function initCanvases() {
+            for (const key in canvases) {
+                const item = canvases[key];
+                const canvas = document.getElementById(item.id);
+                item.ctx = canvas.getContext('2d');
+                resizeCanvas(item);
+            }
+            
+            window.addEventListener('resize', () => {
+                for (const key in canvases) {
+                    resizeCanvas(canvases[key]);
+                }
+            });
+        }
+
+        function resizeCanvas(item) {
+            const canvas = document.getElementById(item.id);
+            const rect = canvas.parentElement.getBoundingClientRect();
+            
+            // Use device pixel ratio for sharp canvas drawings
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            item.width = rect.width;
+            item.height = rect.height;
+            
+            item.ctx.scale(dpr, dpr);
+        }
+
+        // UI Event Binding
+        function setupEventListeners() {
+            // Sliders
+            bindSlider('msgAmp', 'msgAmpVal', ' V', (v) => state.msgAmp = v);
+            bindSlider('msgFreq', 'msgFreqVal', ' Hz', (v) => state.msgFreq = v);
+            bindSlider('msgPhase', 'msgPhaseVal', '°', (v) => state.msgPhase = v * Math.PI / 180);
+            bindSlider('carAmp', 'carAmpVal', ' V', (v) => state.carAmp = v);
+            bindSlider('carFreq', 'carFreqVal', ' Hz', (v) => state.carFreq = v);
+            
+            bindSlider('amModIndex', 'amModIndexVal', '', (v) => state.amModIndex = v);
+            bindSlider('fmBeta', 'fmBetaVal', '', (v) => state.fmBeta = v);
+            bindSlider('pmKp', 'pmKpVal', ' rad/V', (v) => state.pmKp = v);
+            bindSlider('pulseFreq', 'pulseFreqVal', ' Hz', (v) => state.pulseFreq = v);
+            bindSlider('pulseWidth', 'pulseWidthVal', '%', (v) => state.pulseWidth = v);
+            
+            bindSlider('noiseLevel', 'noiseLevelVal', ' dB', (v) => {
+                state.noiseSNR = v;
+                const display = document.getElementById('noiseLevelVal');
+                if (v >= 40) {
+                    display.textContent = 'Clean';
+                    state.noiseSNR = 100; // essentially clean
+                } else if (v === 0) {
+                    display.textContent = 'Extreme';
+                    state.noiseSNR = 0;
+                } else {
+                    display.textContent = v + ' dB';
+                }
+            });
+            
+            bindSlider('rcTime', 'rcTimeVal', '', (v) => {
+                state.rcTime = v;
+                const display = document.getElementById('rcTimeVal');
+                if (v < 15) display.textContent = 'Fast Ripple';
+                else if (v > 75) display.textContent = 'Slow (Diag Clip)';
+                else display.textContent = 'Optimal';
+            });
+            
+            bindSlider('coherentPhase', 'coherentPhaseVal', '°', (v) => state.coherentPhase = v * Math.PI / 180);
+            
+            // Zoom Timebase
+            const zoomInput = document.getElementById('zoomRange');
+            zoomInput.addEventListener('input', () => {
+                state.timeScale = 4 / zoomInput.value; // Map range 5-40 to time scale 0.8s - 0.1s
+            });
+
+            // Selects
+            const modSelect = document.getElementById('modulationSelect');
+            modSelect.addEventListener('change', (e) => {
+                state.modulationType = e.target.value;
+                toggleVariableControlVisibility();
+                updateTheoryText();
+            });
+
+            // Play/Pause button
+            const playBtn = document.getElementById('playBtn');
+            playBtn.addEventListener('click', () => {
+                state.play = !state.play;
+                document.getElementById('playIcon').style.display = state.play ? 'none' : 'block';
+                document.getElementById('pauseIcon').style.display = state.play ? 'block' : 'none';
+                
+                if (state.play) {
+                    state.lastFrameTime = performance.now();
+                }
+            });
+
+            // Presets
+            const presetButtons = document.querySelectorAll('.btn-preset');
+            presetButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    presetButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    applyPreset(btn.dataset.preset);
+                });
+            });
+        }
+
+        function bindSlider(id, valId, suffix, callback) {
+            const slider = document.getElementById(id);
+            const display = document.getElementById(valId);
+            
+            slider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                callback(val);
+                display.textContent = val.toFixed(1) + suffix;
+            });
+        }
+
+        function updateUIValues() {
+            document.getElementById('msgAmp').value = state.msgAmp;
+            document.getElementById('msgAmpVal').textContent = state.msgAmp.toFixed(1) + ' V';
+            document.getElementById('msgFreq').value = state.msgFreq;
+            document.getElementById('msgFreqVal').textContent = state.msgFreq.toFixed(1) + ' Hz';
+            document.getElementById('msgPhase').value = Math.round(state.msgPhase * 180 / Math.PI);
+            document.getElementById('msgPhaseVal').textContent = Math.round(state.msgPhase * 180 / Math.PI) + '°';
+            
+            document.getElementById('carAmp').value = state.carAmp;
+            document.getElementById('carAmpVal').textContent = state.carAmp.toFixed(1) + ' V';
+            document.getElementById('carFreq').value = state.carFreq;
+            document.getElementById('carFreqVal').textContent = state.carFreq.toFixed(1) + ' Hz';
+            
+            document.getElementById('amModIndex').value = state.amModIndex;
+            document.getElementById('amModIndexVal').textContent = state.amModIndex.toFixed(2);
+            document.getElementById('fmBeta').value = state.fmBeta;
+            document.getElementById('fmBetaVal').textContent = state.fmBeta.toFixed(1);
+            document.getElementById('pmKp').value = state.pmKp;
+            document.getElementById('pmKpVal').textContent = state.pmKp.toFixed(1) + ' rad/V';
+            
+            document.getElementById('pulseFreq').value = state.pulseFreq;
+            document.getElementById('pulseFreqVal').textContent = state.pulseFreq.toFixed(1) + ' Hz';
+            document.getElementById('pulseWidth').value = state.pulseWidth;
+            document.getElementById('pulseWidthVal').textContent = state.pulseWidth.toFixed(0) + '%';
+            
+            document.getElementById('coherentPhase').value = Math.round(state.coherentPhase * 180 / Math.PI);
+            document.getElementById('coherentPhaseVal').textContent = Math.round(state.coherentPhase * 180 / Math.PI) + '°';
+            
+            // Set active select
+            document.getElementById('modulationSelect').value = state.modulationType;
+            
+            toggleVariableControlVisibility();
+        }
+
+        function toggleVariableControlVisibility() {
+            const isAm = state.modulationType.startsWith('am-');
+            const isFm = state.modulationType === 'fm';
+            const isPm = state.modulationType === 'pm';
+            const isPulse = ['pam', 'pwm', 'ppm'].includes(state.modulationType);
+            
+            document.getElementById('groupAmModIndex').style.display = (state.modulationType === 'am-dsbfc') ? 'block' : 'none';
+            document.getElementById('groupFmBeta').style.display = isFm ? 'block' : 'none';
+            document.getElementById('groupPmKp').style.display = isPm ? 'block' : 'none';
+            
+            document.getElementById('groupPulseParams').style.display = isPulse ? 'block' : 'none';
+            document.getElementById('groupPulseWidth').style.display = (state.modulationType === 'pwm') ? 'block' : 'none';
+            
+            // Demodulator options visibility
+            const showEnvelopeDet = (state.modulationType === 'am-dsbfc' || state.modulationType === 'fm');
+            const showCoherentDet = (state.modulationType === 'am-dsbsc' || state.modulationType === 'am-ssbsc');
+            
+            document.getElementById('groupEnvelopeDet').style.display = showEnvelopeDet ? 'block' : 'none';
+            document.getElementById('groupCoherentDet').style.display = showCoherentDet ? 'block' : 'none';
+        }
+
+        function updateTheoryText() {
+            const theory = theoryData[state.modulationType];
+            if (theory) {
+                document.getElementById('theoryTitle').textContent = theory.title;
+                document.getElementById('theoryBody').textContent = theory.body;
+                document.getElementById('theoryFormula').textContent = theory.formula;
+            }
+        }
+
+        // Preset Configurations
+        function applyPreset(presetName) {
+            switch(presetName) {
+                case 'am-standard':
+                    state.modulationType = 'am-dsbfc';
+                    state.msgAmp = 0.8;
+                    state.msgFreq = 5.0;
+                    state.carAmp = 1.0;
+                    state.carFreq = 70.0;
+                    state.amModIndex = 0.8;
+                    state.noiseSNR = 100;
+                    state.rcTime = 50.0;
+                    break;
+                case 'am-overmod':
+                    state.modulationType = 'am-dsbfc';
+                    state.msgAmp = 1.5;
+                    state.msgFreq = 4.0;
+                    state.carAmp = 1.0;
+                    state.carFreq = 80.0;
+                    state.amModIndex = 1.5; // Overmodulation
+                    state.noiseSNR = 100;
+                    state.rcTime = 40.0;
+                    break;
+                case 'dsb-sc':
+                    state.modulationType = 'am-dsbsc';
+                    state.msgAmp = 1.0;
+                    state.msgFreq = 6.0;
+                    state.carAmp = 1.0;
+                    state.carFreq = 90.0;
+                    state.noiseSNR = 100;
+                    state.coherentPhase = 0; // phase aligned
+                    break;
+                case 'ssb-single':
+                    state.modulationType = 'am-ssbsc';
+                    state.msgAmp = 1.0;
+                    state.msgFreq = 5.0;
+                    state.carAmp = 1.0;
+                    state.carFreq = 80.0;
+                    state.noiseSNR = 100;
+                    state.coherentPhase = 0;
+                    break;
+                case 'fm-wideband':
+                    state.modulationType = 'fm';
+                    state.msgAmp = 1.0;
+                    state.msgFreq = 4.0;
+                    state.carAmp = 1.0;
+                    state.carFreq = 60.0;
+                    state.fmBeta = 6.0; // Wideband FM index
+                    state.noiseSNR = 100;
+                    state.rcTime = 30.0;
+                    break;
+                case 'pam-sampling':
+                    state.modulationType = 'pam';
+                    state.msgAmp = 1.0;
+                    state.msgFreq = 4.0;
+                    state.carAmp = 1.0;
+                    state.pulseFreq = 20.0; // low sampling rate
+                    state.noiseSNR = 100;
+                    break;
+                case 'noise-channel':
+                    state.modulationType = 'fm';
+                    state.msgAmp = 1.0;
+                    state.msgFreq = 5.0;
+                    state.carAmp = 1.0;
+                    state.carFreq = 80.0;
+                    state.fmBeta = 3.0;
+                    state.noiseSNR = 15; // Noise added!
+                    break;
+            }
+            updateUIValues();
+        }
+
+        // Math Utilities & Signal Calculation
+        function getMessageVal(t) {
+            return state.msgAmp * Math.cos(2 * Math.PI * state.msgFreq * t + state.msgPhase);
+        }
+
+        function getCarrierVal(t) {
+            return state.carAmp * Math.cos(2 * Math.PI * state.carFreq * t);
+        }
+
+        // Helper to generate White Gaussian Noise approximation using Box-Muller transform
+        function getGaussianNoise(stdDev) {
+            const u1 = Math.random() || 0.0001; // Avoid 0
+            const u2 = Math.random() || 0.0001;
+            return stdDev * Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+        }
+
+        function getSignalValues(t, idx, dt) {
+            const m = getMessageVal(t);
+            const c = getCarrierVal(t);
+            let s = 0;
+            let envU = null;
+            let envL = null;
+
+            // Apply Modulation
+            switch (state.modulationType) {
+                case 'am-dsbfc': {
+                    // Standard AM formula: s(t) = [Ac + m(t)] cos(2pi fc t)
+                    const modulationFactor = 1 + state.amModIndex * (m / (state.msgAmp || 1));
+                    s = state.carAmp * modulationFactor * Math.cos(2 * Math.PI * state.carFreq * t);
+                    
+                    // Envelope limits
+                    envU = state.carAmp * (1 + state.amModIndex * (m / (state.msgAmp || 1)));
+                    envL = -envU;
+                    break;
+                }
+                case 'am-dsbsc': {
+                    s = m * Math.cos(2 * Math.PI * state.carFreq * t);
+                    envU = Math.abs(m);
+                    envL = -envU;
+                    break;
+                }
+                case 'am-ssbsc': {
+                    // USB: s(t) = m(t)cos(wc t) - m_hat(t)sin(wc t)
+                    // For single-tone cos(wm t + pm), m_hat = sin(wm t + pm)
+                    const mHat = state.msgAmp * Math.sin(2 * Math.PI * state.msgFreq * t + state.msgPhase);
+                    s = 0.5 * (m * Math.cos(2 * Math.PI * state.carFreq * t) - mHat * Math.sin(2 * Math.PI * state.carFreq * t));
+                    break;
+                }
+                case 'fm': {
+                    // FM formula: s(t) = Ac cos( 2pi fc t + beta * sin(2pi fm t + pm) )
+                    s = state.carAmp * Math.cos(2 * Math.PI * state.carFreq * t + state.fmBeta * Math.sin(2 * Math.PI * state.msgFreq * t + state.msgPhase));
+                    envU = state.carAmp;
+                    envL = -state.carAmp;
+                    break;
+                }
+                case 'pm': {
+                    s = state.carAmp * Math.cos(2 * Math.PI * state.carFreq * t + state.pmKp * m);
+                    envU = state.carAmp;
+                    envL = -state.carAmp;
+                    break;
+                }
+                case 'pam': {
+                    // Periodic sampling pulse train simulation
+                    const ts = 1 / state.pulseFreq;
+                    const periodIdx = Math.floor(t / ts);
+                    const timeInPeriod = t - (periodIdx * ts);
+                    const pulseWidthSec = ts * 0.25; // 25% duty cycle sampling pulses
+                    
+                    if (timeInPeriod < pulseWidthSec) {
+                        const tSample = periodIdx * ts;
+                        s = getMessageVal(tSample);
+                    } else {
+                        s = 0;
+                    }
+                    break;
+                }
+                case 'pwm': {
+                    // Comparing message with sawtooth wave [0, 1]
+                    const ts = 1 / state.pulseFreq;
+                    const timeInPeriod = t % ts;
+                    const sawtooth = timeInPeriod / ts;
+                    
+                    const msgNormalized = (m / (state.msgAmp || 1)) * 0.4 + 0.5;
+                    s = (msgNormalized > sawtooth) ? state.carAmp : -state.carAmp;
+                    break;
+                }
+                case 'ppm': {
+                    const ts = 1 / state.pulseFreq;
+                    const periodIdx = Math.floor(t / ts);
+                    const timeInPeriod = t - (periodIdx * ts);
+                    
+                    const msgVal = getMessageVal(periodIdx * ts);
+                    const shift = (msgVal / (state.msgAmp || 1)) * 0.35 * ts;
+                    const pulseCenter = ts / 2 + shift;
+                    const pulseWidth = ts * 0.1;
+                    
+                    if (Math.abs(timeInPeriod - pulseCenter) < pulseWidth / 2) {
+                        s = state.carAmp;
+                    } else {
+                        s = 0;
+                    }
+                    break;
+                }
+            }
+
+            // Add Channel Noise (AWGN)
+            let sNoisy = s;
+            if (state.noiseSNR < 40) {
+                const sigPower = (state.modulationType.startsWith('am-') || state.modulationType === 'fm' || state.modulationType === 'pm') ? 
+                    (state.carAmp * state.carAmp) / 2 : 0.5;
+                const noisePower = sigPower / Math.pow(10, state.noiseSNR / 10);
+                const noiseStdDev = Math.sqrt(noisePower);
+                
+                sNoisy += getGaussianNoise(noiseStdDev);
+            }
+
+            return { m, c, s, sNoisy, envU, envL };
+        }
+
+        // Simulate Demodulators
+        function simulateDemodulation(timeArray, rawSignalArray, noisySignalArray, dt) {
+            const length = timeArray.length;
+            const demodArray = new Float32Array(length);
+            
+            if (state.modulationType === 'am-dsbfc') {
+                let vc = 0;
+                const rc = (state.rcTime * 1.5) * dt; 
+                const decay = Math.exp(-dt / rc);
+                
+                for (let i = 0; i < length; i++) {
+                    const vRect = Math.max(0, noisySignalArray[i]);
+                    if (vRect > vc) {
+                        vc = vRect;
+                    } else {
+                        vc = vc * decay;
+                    }
+                    demodArray[i] = vc;
+                }
+                
+                let sum = 0;
+                for (let i = 0; i < length; i++) sum += demodArray[i];
+                const avg = sum / length;
+                for (let i = 0; i < length; i++) {
+                    demodArray[i] = (demodArray[i] - avg) * 2;
+                }
+            } 
+            else if (state.modulationType === 'am-dsbsc' || state.modulationType === 'am-ssbsc') {
+                const mixed = new Float32Array(length);
+                for (let i = 0; i < length; i++) {
+                    const t = timeArray[i];
+                    const localCarrier = Math.cos(2 * Math.PI * state.carFreq * t + state.coherentPhase);
+                    mixed[i] = noisySignalArray[i] * localCarrier * 4;
+                }
+                
+                const Tc = 1 / state.carFreq;
+                const filterSpan = Math.max(3, Math.round(Tc / dt));
+                
+                for (let i = 0; i < length; i++) {
+                    let sum = 0;
+                    let count = 0;
+                    const halfSpan = Math.floor(filterSpan / 2);
+                    for (let j = -halfSpan; j <= halfSpan; j++) {
+                        const idx = i + j;
+                        if (idx >= 0 && idx < length) {
+                            sum += mixed[idx];
+                            count++;
+                        }
+                    }
+                    demodArray[i] = sum / (count || 1);
+                }
+            } 
+            else if (state.modulationType === 'fm') {
+                const diff = new Float32Array(length);
+                diff[0] = 0;
+                for (let i = 1; i < length; i++) {
+                    diff[i] = (noisySignalArray[i] - noisySignalArray[i-1]) / (state.carFreq * dt * 8);
+                }
+                
+                let vc = 0;
+                const rc = (state.rcTime * 0.8) * dt; 
+                const decay = Math.exp(-dt / rc);
+                
+                for (let i = 0; i < length; i++) {
+                    const vRect = Math.max(0, diff[i]);
+                    if (vRect > vc) {
+                        vc = vRect;
+                    } else {
+                        vc = vc * decay;
+                    }
+                    demodArray[i] = vc;
+                }
+                
+                let sum = 0;
+                for (let i = 0; i < length; i++) sum += demodArray[i];
+                const avg = sum / length;
+                for (let i = 0; i < length; i++) {
+                    demodArray[i] = (demodArray[i] - avg) * (15 / state.fmBeta) * (state.msgAmp);
+                }
+            } 
+            else if (state.modulationType === 'pm') {
+                for (let i = 0; i < length; i++) {
+                    const t = timeArray[i];
+                    const refI = Math.cos(2 * Math.PI * state.carFreq * t);
+                    const refQ = -Math.sin(2 * Math.PI * state.carFreq * t);
+                    
+                    const mixI = noisySignalArray[i] * refI;
+                    const mixQ = noisySignalArray[i] * refQ;
+                    
+                    const Tc = 1 / state.carFreq;
+                    const filterSpan = Math.max(3, Math.round(Tc / dt));
+                    const halfSpan = Math.floor(filterSpan / 2);
+                    
+                    let sumI = 0, sumQ = 0, count = 0;
+                    for (let j = -halfSpan; j <= halfSpan; j++) {
+                        const idx = i + j;
+                        if (idx >= 0 && idx < length) {
+                            sumI += mixI[idx];
+                            sumQ += mixQ[idx];
+                            count++;
+                        }
+                    }
+                    
+                    const filteredI = sumI / count;
+                    const filteredQ = sumQ / count;
+                    
+                    let phase = Math.atan2(filteredQ, filteredI);
+                    demodArray[i] = phase * (state.msgAmp / (state.pmKp || 1));
+                }
+            } 
+            else if (['pam', 'pwm', 'ppm'].includes(state.modulationType)) {
+                let val = 0;
+                const alpha = 0.08 * (40 / state.pulseFreq);
+                
+                for (let i = 0; i < length; i++) {
+                    let sampleInput = noisySignalArray[i];
+                    
+                    if (state.modulationType === 'pwm') {
+                        sampleInput = noisySignalArray[i] > 0 ? state.msgAmp : -state.msgAmp;
+                    } else if (state.modulationType === 'ppm') {
+                        sampleInput = noisySignalArray[i] * 2;
+                    }
+                    
+                    val = val + alpha * (sampleInput - val);
+                    demodArray[i] = val;
+                }
+                
+                let sum = 0;
+                for (let i = 0; i < length; i++) sum += demodArray[i];
+                const avg = sum / length;
+                for (let i = 0; i < length; i++) {
+                    demodArray[i] = (demodArray[i] - avg) * (state.modulationType === 'pam' ? 4.0 : 2.5);
+                }
+            }
+            
+            return demodArray;
+        }
+
+        // Simple Radix-2 Cooley-Tukey FFT
+        function fft(re, im) {
+            const n = re.length;
+            if (n <= 1) return;
+            
+            let j = 0;
+            for (let i = 0; i < n; i++) {
+                if (i < j) {
+                    let temp = re[i]; re[i] = re[j]; re[j] = temp;
+                    temp = im[i]; im[i] = im[j]; im[j] = temp;
+                }
+                let m = n >> 1;
+                while (m >= 1 && j >= m) {
+                    j -= m;
+                    m >>= 1;
+                }
+                j += m;
+            }
+            
+            for (let len = 2; len <= n; len <<= 1) {
+                const angle = -2 * Math.PI / len;
+                const wlenRe = Math.cos(angle);
+                const wlenIm = Math.sin(angle);
+                
+                for (let i = 0; i < n; i += len) {
+                    let wRe = 1.0;
+                    let wIm = 0.0;
+                    for (let k = 0; k < len / 2; k++) {
+                        const uRe = re[i + k];
+                        const uIm = im[i + k];
+                        const tRe = re[i + k + len/2] * wRe - im[i + k + len/2] * wIm;
+                        const tIm = re[i + k + len/2] * wIm + im[i + k + len/2] * wRe;
+                        
+                        re[i + k] = uRe + tRe;
+                        im[i + k] = uIm + tIm;
+                        re[i + k + len/2] = uRe - tRe;
+                        im[i + k + len/2] = uIm - tIm;
+                        
+                        const nextWRe = wRe * wlenRe - wIm * wlenIm;
+                        wIm = wRe * wlenIm + wIm * wlenRe;
+                        wRe = nextWRe;
+                    }
+                }
+            }
+        }
+
+        function calculateSpectrum(signalArray, Fs) {
+            const N = 512;
+            const re = new Float32Array(N);
+            const im = new Float32Array(N);
+            
+            for (let i = 0; i < N; i++) {
+                const windowVal = 0.5 * (1.0 - Math.cos(2 * Math.PI * i / (N - 1)));
+                re[i] = signalArray[i] * windowVal;
+                im[i] = 0;
+            }
+            
+            fft(re, im);
+            
+            const spectrum = new Float32Array(N / 2);
+            for (let i = 0; i < N / 2; i++) {
+                spectrum[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]) / (N / 4);
+            }
+            
+            return spectrum;
+        }
+
+        // Simulation Loop
+        function simulationLoop(timestamp) {
+            let dt = 0;
+            if (state.play) {
+                dt = (timestamp - state.lastFrameTime) / 1000;
+                if (dt > 0.1) dt = 0.1;
+                state.time += dt;
+            }
+            state.lastFrameTime = timestamp;
+            
+            document.getElementById('timeDisplay').textContent = state.time.toFixed(3) + 's';
+            
+            const N = 512;
+            const timeArray = new Float32Array(N);
+            const msgArray = new Float32Array(N);
+            const carArray = new Float32Array(N);
+            const modArray = new Float32Array(N);
+            const modNoisyArray = new Float32Array(N);
+            const envUpperArray = new Float32Array(N);
+            const envLowerArray = new Float32Array(N);
+            
+            const dtSample = state.timeScale / N;
+            const tStart = state.play ? (state.time - state.timeScale) : state.time;
+            
+            for (let i = 0; i < N; i++) {
+                const t = tStart + i * dtSample;
+                timeArray[i] = t;
+                const vals = getSignalValues(t, i, dtSample);
+                
+                msgArray[i] = vals.m;
+                carArray[i] = vals.c;
+                modArray[i] = vals.s;
+                modNoisyArray[i] = vals.sNoisy;
+                envUpperArray[i] = vals.envU;
+                envLowerArray[i] = vals.envL;
+            }
+            
+            const demodArray = simulateDemodulation(timeArray, modArray, modNoisyArray, dtSample);
+            
+            const sampleRate = N / state.timeScale;
+            const nyquistLimit = sampleRate / 2;
+            const nyquistSpan = document.getElementById('nyquistDisplay');
+            
+            let criticalFreq = state.carFreq;
+            if (['pam', 'pwm', 'ppm'].includes(state.modulationType)) {
+                criticalFreq = state.pulseFreq;
+            }
+            
+            if (criticalFreq >= nyquistLimit * 0.9) {
+                nyquistSpan.textContent = 'Aliasing Warning!';
+                nyquistSpan.style.color = 'var(--color-noise)';
+            } else {
+                nyquistSpan.textContent = 'Safe';
+                nyquistSpan.style.color = 'var(--color-demodulated)';
+            }
+            
+            const spectrum = calculateSpectrum(modArray, sampleRate);
+            
+            updateMathFormulas();
+            calculateStats(msgArray, carArray, modArray, demodArray, spectrum, sampleRate);
+            
+            drawInputSignals(msgArray, carArray);
+            drawModulatedSignal(modNoisyArray, envUpperArray, envLowerArray);
+            drawDemodulatedSignal(msgArray, demodArray);
+            drawSpectrum(spectrum, sampleRate);
+            
+            requestAnimationFrame(simulationLoop);
+        }
+
+        // Live Statistics Calculations
+        function calculateStats(msg, car, mod, demod, spectrum, fs) {
+            let mMax = -999, cMax = -999;
+            for (let i = 0; i < msg.length; i++) {
+                if (Math.abs(msg[i]) > mMax) mMax = Math.abs(msg[i]);
+                if (Math.abs(car[i]) > cMax) cMax = Math.abs(car[i]);
+            }
+            document.getElementById('statMsgMax').textContent = mMax.toFixed(2) + ' V';
+            document.getElementById('statCarMax').textContent = cMax.toFixed(2) + ' V';
+            
+            let modVp = 0;
+            let sumSq = 0;
+            for (let i = 0; i < mod.length; i++) {
+                const valAbs = Math.abs(mod[i]);
+                if (valAbs > modVp) modVp = valAbs;
+                sumSq += mod[i] * mod[i];
+            }
+            const power = sumSq / mod.length;
+            document.getElementById('statModVp').textContent = modVp.toFixed(2) + ' V';
+            document.getElementById('statModPower').textContent = power.toFixed(2) + ' W';
+            
+            const binSize = fs / 512;
+            let totalSpectrumPower = 0;
+            for (let i = 1; i < spectrum.length; i++) totalSpectrumPower += spectrum[i] * spectrum[i];
+            
+            let cumPower = 0;
+            let activeBins = 0;
+            for (let i = 1; i < spectrum.length; i++) {
+                cumPower += spectrum[i] * spectrum[i];
+                activeBins = i;
+                if (cumPower >= totalSpectrumPower * 0.99) break;
+            }
+            const bandwidth = activeBins * binSize;
+            document.getElementById('statBandwidth').textContent = bandwidth.toFixed(1) + ' Hz';
+            
+            const carBin = Math.round(state.carFreq / binSize);
+            let carPeak = 0;
+            if (carBin < spectrum.length) {
+                carPeak = Math.max(
+                    spectrum[Math.max(0, carBin - 1)],
+                    spectrum[carBin],
+                    spectrum[Math.min(spectrum.length - 1, carBin + 1)]
+                );
+            }
+            const carrierPowerVal = (carPeak * carPeak) / 2;
+            document.getElementById('statCarrPower').textContent = carrierPowerVal.toFixed(2) + ' W';
+            
+            let correlation = 0;
+            let dotProd = 0, sumM2 = 0, sumD2 = 0;
+            
+            let avgM = 0, avgD = 0;
+            for (let i = 0; i < msg.length; i++) {
+                avgM += msg[i];
+                avgD += demod[i];
+            }
+            avgM /= msg.length;
+            avgD /= msg.length;
+            
+            for (let i = 0; i < msg.length; i++) {
+                const mNorm = msg[i] - avgM;
+                const dNorm = demod[i] - avgD;
+                dotProd += mNorm * dNorm;
+                sumM2 += mNorm * mNorm;
+                sumD2 += dNorm * dNorm;
+            }
+            
+            if (sumM2 > 0 && sumD2 > 0) {
+                correlation = dotProd / Math.sqrt(sumM2 * sumD2);
+            }
+            
+            const fidelitySpan = document.getElementById('statFidelity');
+            if (correlation > 0.95) {
+                fidelitySpan.textContent = 'Excellent';
+                fidelitySpan.style.color = 'var(--color-demodulated)';
+            } else if (correlation > 0.75) {
+                fidelitySpan.textContent = 'Good';
+                fidelitySpan.style.color = 'var(--color-spectrum)';
+            } else if (correlation > 0.4) {
+                fidelitySpan.textContent = 'Distorted';
+                fidelitySpan.style.color = 'var(--color-noise)';
+            } else {
+                fidelitySpan.textContent = 'Fails (No lock)';
+                fidelitySpan.style.color = 'var(--color-noise)';
+            }
+        }
+
+        function updateMathFormulas() {
+            const mathMod = document.getElementById('mathModulated');
+            const mathDemod = document.getElementById('mathDemodulated');
+            
+            switch (state.modulationType) {
+                case 'am-dsbfc':
+                    mathMod.textContent = `s(t) = (Ac + m(t)) cos(2π fc t)`;
+                    mathDemod.textContent = `y(t) = |s(t)|_LPF - DC`;
+                    break;
+                case 'am-dsbsc':
+                    mathMod.textContent = `s(t) = m(t) cos(2π fc t)`;
+                    mathDemod.textContent = `y(t) = [s(t) * cos(2π fc t + Δϕ)]_LPF`;
+                    break;
+                case 'am-ssbsc':
+                    mathMod.textContent = `s(t) = m(t)cos(wc t) - m̂(t)sin(wc t)`;
+                    mathDemod.textContent = `y(t) = [s(t) * cos(2π fc t + Δϕ)]_LPF`;
+                    break;
+                case 'fm':
+                    mathMod.textContent = `s(t) = Ac cos(2π fc t + β sin(2π fm t))`;
+                    mathDemod.textContent = `y(t) = Envelope[ ds(t)/dt ]`;
+                    break;
+                case 'pm':
+                    mathMod.textContent = `s(t) = Ac cos(2π fc t + kp m(t))`;
+                    mathDemod.textContent = `y(t) = Instantaneous Phase - wc t`;
+                    break;
+                case 'pam':
+                    mathMod.textContent = `s(t) = Sampled flat-top pulses`;
+                    mathDemod.textContent = `y(t) = [ s(t) ]_LPF`;
+                    break;
+                case 'pwm':
+                    mathMod.textContent = `s(t) = Width-modulated pulse train`;
+                    mathDemod.textContent = `y(t) = [ s(t) ]_LPF`;
+                    break;
+                case 'ppm':
+                    mathMod.textContent = `s(t) = Position-modulated impulse train`;
+                    mathDemod.textContent = `y(t) = [ s(t) ]_LPF`;
+                    break;
+            }
+        }
+
+        // Drawing Functions
+        function drawGrid(ctx, w, h) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x < w; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < h; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1.5;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, h/2);
+            ctx.lineTo(w, h/2);
+            ctx.stroke();
+        }
+
+        function drawInputSignals(msgArray, carArray) {
+            const item = canvases.input;
+            const ctx = item.ctx;
+            const w = item.width;
+            const h = item.height;
+            
+            ctx.fillStyle = '#080c18';
+            ctx.fillRect(0, 0, w, h);
+            drawGrid(ctx, w, h);
+            
+            const yScale = h / 4.5;
+            const len = msgArray.length;
+            const dx = w / len;
+            
+            // 1. Draw Carrier c(t) (in Magenta, low opacity)
+            ctx.strokeStyle = 'rgba(217, 70, 239, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+                const x = i * dx;
+                const y = h/2 - carArray[i] * yScale;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // 2. Draw Message m(t) (in glowing Cyan)
+            ctx.strokeStyle = varColor('--color-message');
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = varColor('--color-message');
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+                const x = i * dx;
+                const y = h/2 - msgArray[i] * yScale;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+
+        function drawModulatedSignal(modArray, envUpper, envLower) {
+            const item = canvases.modulated;
+            const ctx = item.ctx;
+            const w = item.width;
+            const h = item.height;
+            
+            ctx.fillStyle = '#080c18';
+            ctx.fillRect(0, 0, w, h);
+            drawGrid(ctx, w, h);
+            
+            const yScale = h / 4.5;
+            const len = modArray.length;
+            const dx = w / len;
+            
+            if (envUpper[0] !== null && (state.modulationType === 'am-dsbfc' || state.modulationType === 'am-dsbsc')) {
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                
+                ctx.beginPath();
+                for (let i = 0; i < len; i++) {
+                    ctx.lineTo(i * dx, h/2 - envUpper[i] * yScale);
+                }
+                ctx.stroke();
+                
+                ctx.beginPath();
+                for (let i = 0; i < len; i++) {
+                    ctx.lineTo(i * dx, h/2 - envLower[i] * yScale);
+                }
+                ctx.stroke();
+                
+                ctx.setLineDash([]);
+            }
+            
+            ctx.strokeStyle = varColor('--color-modulated');
+            ctx.lineWidth = 1.8;
+            ctx.shadowColor = varColor('--color-modulated');
+            ctx.shadowBlur = 4;
+            
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+                const x = i * dx;
+                const y = h/2 - modArray[i] * yScale;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+
+        function drawDemodulatedSignal(msgArray, demodArray) {
+            const item = canvases.demodulated;
+            const ctx = item.ctx;
+            const w = item.width;
+            const h = item.height;
+            
+            ctx.fillStyle = '#080c18';
+            ctx.fillRect(0, 0, w, h);
+            drawGrid(ctx, w, h);
+            
+            const yScale = h / 4.5;
+            const len = msgArray.length;
+            const dx = w / len;
+            
+            // 1. Draw Original Message m(t) in dotted Cyan
+            ctx.strokeStyle = 'rgba(0, 242, 254, 0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+                const x = i * dx;
+                const y = h/2 - msgArray[i] * yScale;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 2. Draw Recovered Signal in Glowing Emerald
+            ctx.strokeStyle = varColor('--color-demodulated');
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = varColor('--color-demodulated');
+            ctx.shadowBlur = 8;
+            
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+                const x = i * dx;
+                const y = h/2 - demodArray[i] * yScale;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+
+        function drawSpectrum(spectrum, sampleRate) {
+            const item = canvases.spectrum;
+            const ctx = item.ctx;
+            const w = item.width;
+            const h = item.height;
+            
+            ctx.fillStyle = '#080c18';
+            ctx.fillRect(0, 0, w, h);
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < w; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h - 20);
+                ctx.stroke();
+            }
+            for (let y = 20; y < h; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.beginPath();
+            ctx.moveTo(0, h - 20);
+            ctx.lineTo(w, h - 20);
+            ctx.stroke();
+            
+            const len = spectrum.length;
+            const binWidth = sampleRate / 512;
+            const maxFreqShow = 180;
+            const binsToShow = Math.round(maxFreqShow / binWidth);
+            const dx = w / Math.min(len, binsToShow);
+            
+            ctx.fillStyle = 'var(--text-secondary)';
+            ctx.font = '9px var(--font-mono)';
+            ctx.textAlign = 'center';
+            
+            const stepLabel = 30;
+            for (let f = 0; f <= maxFreqShow; f += stepLabel) {
+                const binIdx = f / binWidth;
+                const x = binIdx * dx;
+                if (x <= w) {
+                    ctx.fillText(f + 'Hz', x, h - 6);
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.moveTo(x, h - 20);
+                    ctx.lineTo(x, h - 24);
+                    ctx.stroke();
+                }
+            }
+            
+            ctx.strokeStyle = varColor('--color-spectrum');
+            ctx.lineWidth = 2;
+            ctx.shadowColor = varColor('--color-spectrum');
+            ctx.shadowBlur = 6;
+            
+            const yScale = (h - 40) * 1.5;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, h - 20);
+            
+            for (let i = 0; i < Math.min(len, binsToShow); i++) {
+                const x = i * dx;
+                const y = (h - 20) - spectrum[i] * yScale;
+                ctx.lineTo(x, y);
+            }
+            
+            ctx.lineTo(Math.min(len, binsToShow) * dx, h - 20);
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
+            ctx.fill();
+        }
+
+        function varColor(varName) {
+            return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+        }
+    </script>
+</body>
+</html>
